@@ -1,0 +1,9 @@
+1. The primary problem the AI ran into was the google drive file download, I believe the 
+download requires the code to complete a prompt saying that yes it would like to download
+despite the file not being scanned for viruses. Normally when downloading files this is 
+not a step that would be necessary. Full transparency though, this is the second time I've 
+attempted this part of the assignment and the model finished way faster than last time.
+The other problem was run time, the code just took a really long time to run at first, 
+so I just prompted the AI to speed it up and after that it ran quickly.
+2. I have some free codex credits, so I gave it the same prompt and compared the output 
+this let me determine how accurate the model was.
