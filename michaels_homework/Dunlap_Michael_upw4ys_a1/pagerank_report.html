@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PageRank Implementation Comparison Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e2e4eb;
+    --text-dim: #8b8fa3;
+    --accent-blue: #5b8def;
+    --accent-green: #4ecb71;
+    --accent-orange: #f0a050;
+    --accent-red: #e85d5d;
+    --accent-purple: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--text-dim); font-size: 1.05rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--accent-blue); }
+  p { margin-bottom: 1rem; color: var(--text-dim); }
+  .grid { display: grid; gap: 1.5rem; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .card h3 { margin-top: 0; }
+  .metric {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .metric-label { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.25rem; }
+  .blue { color: var(--accent-blue); }
+  .green { color: var(--accent-green); }
+  .orange { color: var(--accent-orange); }
+  .purple { color: var(--accent-purple); }
+  .red { color: var(--accent-red); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { font-variant-numeric: tabular-nums; }
+  tr:hover td { background: var(--surface2); }
+  .chart-container { position: relative; height: 350px; }
+  .chart-container-sm { position: relative; height: 280px; }
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(78,203,113,0.15); color: var(--accent-green); }
+  .badge-orange { background: rgba(240,160,80,0.15); color: var(--accent-orange); }
+  .badge-red { background: rgba(232,93,93,0.15); color: var(--accent-red); }
+  .badge-blue { background: rgba(91,141,239,0.15); color: var(--accent-blue); }
+  .analysis-block {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent-blue);
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+  }
+  .analysis-block p { margin-bottom: 0.5rem; }
+  .analysis-block p:last-child { margin-bottom: 0; }
+  .highlight { color: var(--text); font-weight: 500; }
+  .diff-positive { color: var(--accent-green); }
+  .diff-negative { color: var(--accent-red); }
+  .diff-neutral { color: var(--text-dim); }
+  .footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>PageRank Implementation Comparison</h1>
+  <p class="subtitle">Berkeley-Stanford Web Graph &mdash; 685,230 nodes, 7,600,595 edges &mdash; 10 iterations</p>
+
+  <!-- Key Metrics -->
+  <div class="grid grid-3" style="margin-bottom: 2rem;">
+    <div class="card">
+      <h3><span class="badge badge-green">Fastest</span>&nbsp; DuckDB</h3>
+      <div class="metric green">7.58s</div>
+      <div class="metric-label">Computation time</div>
+      <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-dim);">
+        680,486 pages &bull; SQL-based
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="badge badge-orange">Middle</span>&nbsp; GraphFrames</h3>
+      <div class="metric orange">244.45s</div>
+      <div class="metric-label">Computation time</div>
+      <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-dim);">
+        685,230 vertices &bull; Built-in API
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="badge badge-red">Slowest</span>&nbsp; Custom PySpark</h3>
+      <div class="metric red">471.54s</div>
+      <div class="metric-label">Computation time</div>
+      <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-dim);">
+        680,486 pages &bull; RDD-based
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Chart -->
+  <h2>1. Performance Comparison</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Execution Time (seconds)</h3>
+      <div class="chart-container">
+        <canvas id="timeChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Relative Speed (normalized to DuckDB = 1)</h3>
+      <div class="chart-container">
+        <canvas id="speedChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dataset Info -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>Dataset &amp; Configuration</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Dataset</td><td class="highlight">Berkeley-Stanford Web Graph (web-BerkStan.txt)</td></tr>
+        <tr><td>Total Nodes</td><td class="highlight">685,230</td></tr>
+        <tr><td>Total Edges</td><td class="highlight">7,600,595</td></tr>
+        <tr><td>Pages with Outgoing Links</td><td class="highlight">680,486</td></tr>
+        <tr><td>Damping Factor</td><td class="highlight">0.85</td></tr>
+        <tr><td>Reset Probability</td><td class="highlight">0.15</td></tr>
+        <tr><td>Iterations</td><td class="highlight">10</td></tr>
+        <tr><td>Hardware</td><td class="highlight">2 CPU cores, 3 GB driver/executor memory</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Rank Comparison -->
+  <h2>2. Top-20 PageRank Results Comparison</h2>
+  <div class="card">
+    <p>The table below shows the top 20 pages ranked by each method. DuckDB and Custom PySpark produce <span class="highlight">nearly identical</span> results (matching to ~10 decimal places). GraphFrames differs because it includes all 685,230 vertices (including sink nodes) and distributes rank from dangling nodes differently.</p>
+    <div style="overflow-x:auto;">
+      <table id="rankTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Page ID</th>
+            <th class="blue">DuckDB</th>
+            <th class="blue">PySpark (Custom)</th>
+            <th class="orange">GraphFrames</th>
+            <th>DuckDB vs PySpark Diff</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Rank Correlation Chart -->
+  <h2>3. Rank Value Comparison (Top 20)</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>PageRank Values</h3>
+      <div class="chart-container">
+        <canvas id="rankBarChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Rank Order Agreement</h3>
+      <div class="chart-container">
+        <canvas id="orderChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Convergence -->
+  <h2>4. Iteration Progress</h2>
+  <div class="card">
+    <h3>Pages Processed Per Iteration</h3>
+    <div class="chart-container">
+      <canvas id="convergenceChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Analysis -->
+  <h2>5. Analysis &amp; Observations</h2>
+
+  <h3>Performance Differences</h3>
+  <div class="analysis-block">
+    <p><span class="highlight">DuckDB is the fastest (7.58s)</span> by a wide margin &mdash; 62x faster than custom PySpark and 32x faster than GraphFrames. This is expected because DuckDB uses vectorized columnar execution with minimal orchestration overhead, processing the entire graph in-memory on a single machine without serialization or shuffle costs.</p>
+  </div>
+  <div class="analysis-block">
+    <p><span class="highlight">Custom PySpark is the slowest (471.54s)</span> because each iteration requires RDD joins, flatMaps, and reduceByKey operations that trigger shuffles across partitions. On a single machine with only 2 cores, the shuffle/serialization overhead dominates actual computation. However, this implementation reflects the structure that would scale horizontally across a distributed cluster.</p>
+  </div>
+  <div class="analysis-block">
+    <p><span class="highlight">GraphFrames (244.45s) sits in the middle.</span> It simplifies implementation to a single API call (<code>g.pageRank()</code>), but still inherits Spark's job scheduling overhead and graph construction costs. The built-in algorithm is optimized within the JVM, avoiding Python serialization overhead, which explains why it's roughly 2x faster than the custom PySpark RDD approach.</p>
+  </div>
+
+  <h3>Result Consistency</h3>
+  <div class="analysis-block">
+    <p><span class="highlight">DuckDB and Custom PySpark results are virtually identical</span> &mdash; rank values match to approximately 10 decimal places (differences on the order of 10<sup>-10</sup> to 10<sup>-12</sup>). This confirms both implementations follow the same algorithm: initialize ranks to 1.0, propagate rank/degree along edges, apply 0.15 + 0.85 * sum(contributions).</p>
+  </div>
+  <div class="analysis-block">
+    <p><span class="highlight">GraphFrames results differ more noticeably.</span> The #1 page (272919) has rank 6649.56 in GraphFrames vs 6531.32 in the other two methods (~1.8% higher). This is because GraphFrames includes all 685,230 vertices (including 4,744 sink nodes with no outgoing links) and redistributes their rank mass via the random teleport mechanism. The custom implementations only track pages with outgoing links, so dangling node mass is effectively lost rather than redistributed. The <span class="highlight">rank order broadly agrees</span> across all three methods &mdash; the same pages appear in the top ranks, just with different absolute values.</p>
+  </div>
+
+  <h3>Key Takeaways</h3>
+  <div class="analysis-block">
+    <p><span class="highlight">DuckDB</span> is often fastest for single-machine analytical loops due to vectorized execution and low orchestration overhead.</p>
+    <p><span class="highlight">Custom PySpark</span> can be slower locally because of RDD shuffle/serialization overhead, but it reflects distributed execution structure that would scale on a cluster.</p>
+    <p><span class="highlight">GraphFrames</span> simplifies implementation and can be competitive, though it still inherits Spark job overhead and graph construction costs.</p>
+    <p><span class="highlight">Rank order</span> should broadly agree across methods, with small numeric differences caused by implementation details and floating-point accumulation.</p>
+  </div>
+
+  <div class="footer">
+    PageRank Implementation Comparison Report &bull; Berkeley-Stanford Web Graph Dataset
+  </div>
+
+</div>
+
+<script>
+// Data
+const duckdbRanks = [6531.324623752405,4335.323158564366,2383.897607411863,2195.3940755966555,1855.6908757901338,1632.8193684975652,1532.284237448278,1492.930163093891,1436.1600933468912,1261.578395867298,1260.7919421348795,1257.2475650644799,1251.1723536458833,1235.298540597596,1235.298540597596,1235.298540597596,1235.298540597596,1235.298540597596,1235.2985405975867,1235.2985405975867];
+const pysparkRanks = [6531.32462375247,4335.323158564447,2383.8976074118873,2195.3940755967387,1855.6908757901538,1632.819368497571,1532.2842374483419,1492.9301630938776,1436.160093346924,1261.5783958673262,1260.7919421349056,1257.2475650644844,1251.1723536459149,1235.298540597618,1235.298540597618,1235.298540597618,1235.298540597618,1235.298540597618,1235.2985405976176,1235.2985405976176];
+const gfRanks = [6649.555170685473,5198.922569449817,3550.0461772819767,3491.088234031719,2555.3246035546535,2432.470036112752,1890.0365995350662,1661.9255627987332,1615.5251038329718,1581.2896082066075,1523.279665527409,1283.524738957723,1282.7246255363318,1278.8043523156073,1275.1879524587703,1272.9379547467738,1256.7884201838117,1256.7884201838112,1256.788420183811,1256.788420183811];
+const pageIds = [272919,438238,571448,601656,316792,319209,184094,571447,401873,66244,68949,284306,68948,68946,86238,96070,68947,86239,95551,1235];
+
+Chart.defaults.color = '#8b8fa3';
+Chart.defaults.borderColor = '#2e3345';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+// Time bar chart
+new Chart(document.getElementById('timeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['DuckDB', 'GraphFrames', 'Custom PySpark'],
+    datasets: [{
+      label: 'Time (seconds)',
+      data: [7.58, 244.45, 471.54],
+      backgroundColor: ['rgba(78,203,113,0.7)', 'rgba(240,160,80,0.7)', 'rgba(232,93,93,0.7)'],
+      borderColor: ['#4ecb71', '#f0a050', '#e85d5d'],
+      borderWidth: 2,
+      borderRadius: 8,
+      barPercentage: 0.6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#2e3345' }, ticks: { callback: v => v + 's' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Relative speed
+new Chart(document.getElementById('speedChart'), {
+  type: 'bar',
+  data: {
+    labels: ['DuckDB', 'GraphFrames', 'Custom PySpark'],
+    datasets: [{
+      label: 'Relative Speed (lower = faster)',
+      data: [1, 32.2, 62.2],
+      backgroundColor: ['rgba(78,203,113,0.7)', 'rgba(240,160,80,0.7)', 'rgba(232,93,93,0.7)'],
+      borderColor: ['#4ecb71', '#f0a050', '#e85d5d'],
+      borderWidth: 2,
+      borderRadius: 8,
+      barPercentage: 0.6
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, grid: { color: '#2e3345' }, ticks: { callback: v => v + 'x' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// Rank bar chart
+const labels20 = pageIds.map((id, i) => '#' + (i+1) + ': ' + id);
+new Chart(document.getElementById('rankBarChart'), {
+  type: 'bar',
+  data: {
+    labels: labels20,
+    datasets: [
+      { label: 'DuckDB', data: duckdbRanks, backgroundColor: 'rgba(91,141,239,0.7)', borderRadius: 4 },
+      { label: 'PySpark', data: pysparkRanks, backgroundColor: 'rgba(91,141,239,0.4)', borderRadius: 4 },
+      { label: 'GraphFrames', data: gfRanks, backgroundColor: 'rgba(240,160,80,0.7)', borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#2e3345' } },
+      x: { display: false }
+    }
+  }
+});
+
+// Rank order agreement - scatter
+const orderData = duckdbRanks.map((v, i) => ({ x: v, y: pysparkRanks[i] }));
+new Chart(document.getElementById('orderChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'DuckDB vs PySpark',
+      data: orderData,
+      backgroundColor: 'rgba(91,141,239,0.8)',
+      pointRadius: 6
+    }, {
+      label: 'y = x (perfect agreement)',
+      data: [{ x: 0, y: 0 }, { x: 7000, y: 7000 }],
+      type: 'line',
+      borderColor: 'rgba(78,203,113,0.5)',
+      borderDash: [8, 4],
+      pointRadius: 0,
+      borderWidth: 2,
+      fill: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { title: { display: true, text: 'DuckDB Rank Value' }, grid: { color: '#2e3345' } },
+      y: { title: { display: true, text: 'PySpark Rank Value' }, grid: { color: '#2e3345' } }
+    }
+  }
+});
+
+// Convergence
+const iterations = [1,2,3,4,5,6,7,8,9,10];
+const pagesDuckDB = [617094,598652,596936,596773,596722,596705,596695,596686,596677,596668];
+const pagesPySpark = [617094,598652,596936,596773,596722,596705,596695,596686,596677,596668];
+new Chart(document.getElementById('convergenceChart'), {
+  type: 'line',
+  data: {
+    labels: iterations,
+    datasets: [
+      { label: 'DuckDB', data: pagesDuckDB, borderColor: '#4ecb71', backgroundColor: 'rgba(78,203,113,0.1)', fill: true, tension: 0.3, pointRadius: 5 },
+      { label: 'Custom PySpark', data: pagesPySpark, borderColor: '#e85d5d', backgroundColor: 'rgba(232,93,93,0.1)', fill: true, tension: 0.3, pointRadius: 5, borderDash: [6, 3] }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { title: { display: true, text: 'Pages Processed' }, grid: { color: '#2e3345' } },
+      x: { title: { display: true, text: 'Iteration' }, grid: { color: '#2e3345' } }
+    }
+  }
+});
+
+// Build rank table
+const tbody = document.querySelector('#rankTable tbody');
+const diffs = duckdbRanks.map((v, i) => Math.abs(v - pysparkRanks[i]).toExponential(2));
+for (let i = 0; i < 20; i++) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${i+1}</td>
+    <td class="highlight">${pageIds[i]}</td>
+    <td class="blue">${duckdbRanks[i].toFixed(6)}</td>
+    <td class="blue">${pysparkRanks[i].toFixed(6)}</td>
+    <td class="orange">${gfRanks[i].toFixed(6)}</td>
+    <td class="diff-neutral">${diffs[i]}</td>`;
+  tbody.appendChild(tr);
+}
+</script>
+</body>
+</html>
