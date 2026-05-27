@@ -1,0 +1,7 @@
+1. What was one issue, bug, or improvement you found in the generated code? (Leave blank if the coding agent passes it in one shot.)
+
+The coding agent, OpenCode, passed the assignment in one shot. During its work, it did run into a few setup and execution issues, including missing packages and runtime concerns, but it resolved those quickly without requiring changes to the final generated code.
+
+2. How did you verify that the final output was correct?
+
+I verified that the final output was correct by having OpenCode create the script using both the Qwen 3.6 Plus and MiniMax M2.5 models. The outputs matched across both models, which gave me confidence that the final script was correct.
